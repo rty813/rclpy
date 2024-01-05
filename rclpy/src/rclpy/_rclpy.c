@@ -2801,10 +2801,19 @@ rclpy_send_response(PyObject * Py_UNUSED(self), PyObject * args)
   rcl_ret_t ret = rcl_send_response(&(srv->service), header, raw_ros_response);
   destroy_ros_message(raw_ros_response);
   if (ret != RCL_RET_OK) {
-    PyErr_Format(
-      RCLError, "Failed to send request: %s", rcl_get_error_string().str);
-    rcl_reset_error();
-    return NULL;
+    if (ret == RCL_RET_TIMEOUT) {
+      int stack_level = 1;
+      PyErr_WarnFormat(
+        PyExc_RuntimeWarning, stack_level, "failed to send response (timeout): %s", 
+        rcl_get_error_string().str);
+      rcl_reset_error();
+    }
+    else {
+      PyErr_Format(
+        RCLError, "Failed to send request: %s", rcl_get_error_string().str);
+      rcl_reset_error();
+      return NULL;
+    }
   }
   Py_RETURN_NONE;
 }
